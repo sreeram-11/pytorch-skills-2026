@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PyTorch Conference 2026 · AMD Skills</title>
+<style>
+  :root {
+    --bg: #000;
+    --panel: #0f141b;
+    --panel-2: #161d27;
+    --line: #2b3746;
+    --text: #eef3f8;
+    --muted: #9fb0c0;
+    --orange: #f6763c;
+    --orange-2: #e97039;
+    --red: #ed1c24;
+    --green: #37d67a;
+    --yellow: #ffcf5c;
+    --ease: cubic-bezier(.2,.7,.2,1);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #000; overflow: hidden; }
+  body {
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+  code, .mono { font-family: "Cascadia Code", Consolas, "SFMono-Regular", Menlo, monospace; }
+
+  /* ---------- stage: fixed 1920x1080 canvas scaled to fit ---------- */
+  #viewport { position: fixed; inset: 0; display: grid; place-items: center; }
+  #stage {
+    position: relative; width: 1920px; height: 1080px; flex: none;
+    transform-origin: center center;
+  }
+  .slide {
+    position: absolute; inset: 0; overflow: hidden;
+    background:
+      radial-gradient(1200px 700px at 85% -10%, rgba(246,118,60,.07), transparent 60%),
+      radial-gradient(900px 600px at -10% 110%, rgba(0,194,222,.04), transparent 60%),
+      #000;
+    opacity: 0; visibility: hidden;
+    transition: opacity .45s var(--ease), visibility 0s linear .45s;
+  }
+  .slide.active { opacity: 1; visibility: visible; transition: opacity .45s var(--ease); z-index: 2; }
+
+  /* entrance animation for elements marked .in */
+  .slide .in { opacity: 0; transform: translateY(18px); }
+  .slide.active .in {
+    animation: rise .7s var(--ease) forwards;
+    animation-delay: calc(var(--d, 0) * 90ms + 120ms);
+  }
+  @keyframes rise { to { opacity: 1; transform: none; } }
+  .overview .slide .in, .print .slide .in { opacity: 1; transform: none; animation: none; }
+
+  /* ---------- common slide chrome ---------- */
+  .kicker {
+    position: absolute; left: 62px; top: 40px;
+    font-size: 22px; letter-spacing: .14em; font-weight: 600; color: var(--orange);
+  }
+  .title {
+    position: absolute; left: 62px; top: 74px; right: 300px;
+    font-size: 60px; font-weight: 700; letter-spacing: -.01em; line-height: 1.1;
+  }
+  .title span { color: #8d97a3; font-weight: 400; }
+  .title span::before { content: "— "; color: #4a525c; }
+  .footer-logo { position: absolute; right: 56px; bottom: 40px; height: 30px; opacity: .85; }
+  .pagenum {
+    position: absolute; left: 62px; bottom: 40px; font-size: 18px; color: #59626d;
+    letter-spacing: .08em;
+  }
+  .body { position: absolute; left: 62px; right: 62px; top: 200px; bottom: 110px; }
+
+  .shot {
+    border-radius: 14px; overflow: hidden; border: 1px solid var(--line);
+    box-shadow: 0 30px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.02);
+    background: #0b0d10;
+  }
+  .shot img, .shot video { display: block; width: 100%; height: auto; }
+
+  .label { color: var(--orange-2); font-weight: 700; font-size: 34px; margin-bottom: 8px; }
+  .lead { font-size: 32px; line-height: 1.4; color: var(--text); }
+  .muted { color: var(--muted); }
+  .accent { color: var(--orange); }
+  .pill {
+    display: inline-block; padding: 6px 16px; border-radius: 999px; font-size: 18px;
+    font-weight: 700; letter-spacing: .12em;
+  }
+  .new {
+    display: inline-block; background: #ff0000; color: #fff; font-size: 17px; font-weight: 700;
+    padding: 2px 14px; border-radius: 999px; margin-left: 14px; vertical-align: 3px;
+    letter-spacing: .03em;
+  }
+  .qr { width: 220px; border-radius: 12px; background: #fff; padding: 0; }
+
+  /* ---------- slide 1: title ---------- */
+  .s-title { background: url(assets/bg-title.jpg) center/cover no-repeat; }
+  .s-title h1 {
+    position: absolute; left: 1040px; top: 330px; width: 820px; font-size: 80px; font-weight: 700; line-height: 1.05;
+  }
+  .s-title h1 em { display: block; font-style: normal; color: var(--orange); font-size: 72px; margin-top: 14px; }
+  .s-title .who { position: absolute; left: 1044px; top: 668px; font-size: 32px; font-weight: 600; }
+  .s-title .footer-logo { height: 96px; right: 70px; bottom: 60px; opacity: 1; }
+
+  /* ---------- slide 2: hero ---------- */
+  .s-hero { background: #10141c; }
+  .s-hero h1 { position: absolute; left: 52px; top: 44px; font-size: 92px; font-weight: 800; letter-spacing: -.02em; }
+  .s-hero h2 { position: absolute; left: 56px; top: 156px; font-size: 44px; font-weight: 600; color: #e0703a; }
+  .s-hero .gif { position: absolute; left: 8px; top: 254px; width: 1902px; }
+  .s-hero .mask { position: absolute; left: 994px; top: 750px; width: 420px; height: 56px; }
+  .s-hero .qr { position: absolute; right: 24px; top: 24px; width: 244px; }
+
+  /* ---------- slide 3: overview ---------- */
+  .facts { position: absolute; left: 62px; top: 240px; width: 860px; display: grid; gap: 46px; }
+  .facts code {
+    background: #1a1f27; border: 1px solid var(--line); border-radius: 8px; padding: 4px 14px;
+    color: #fff; font-size: 28px;
+  }
+  .s-overview .shot { position: absolute; left: 980px; top: 110px; width: 780px; transform: rotate(.6deg); }
+  .star { position: absolute; right: 70px; bottom: 300px; font-size: 30px; font-weight: 700; color: var(--orange-2); }
+  .s-overview .qr { position: absolute; right: 70px; bottom: 60px; }
+
+  /* ---------- slide 4: catalog ---------- */
+  .catalog { position: absolute; left: 62px; top: 200px; width: 1340px; display: grid; gap: 40px; }
+  .group h3 { font-size: 30px; font-weight: 700; margin-bottom: 14px; }
+  .rows { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .row {
+    display: grid; grid-template-columns: 360px 1fr; align-items: center;
+    padding: 13px 26px; font-size: 25px; background: var(--panel);
+  }
+  .row:nth-child(even) { background: var(--panel-2); }
+  .row b { color: #fff; font-weight: 700; }
+  .row span { color: #c8d3de; }
+  .expand {
+    position: absolute; right: 70px; top: 470px; width: 380px;
+    border: 1px solid rgba(0,176,80,.5); border-left: 6px solid #00b050; border-radius: 12px;
+    padding: 22px 26px; background: rgba(0,176,80,.07);
+  }
+  .expand b { display: block; color: #3be082; font-size: 30px; margin-bottom: 6px; }
+  .expand span { color: #bfe9cf; font-size: 24px; line-height: 1.35; }
+  .s-catalog .qr { position: absolute; right: 70px; bottom: 60px; }
+
+  /* ---------- slide 5: access diagram ---------- */
+  .src {
+    position: absolute; left: 76px; top: 290px; width: 366px; height: 482px;
+    background: #1b2430; border: 2px solid var(--line); border-radius: 22px;
+    display: flex; flex-direction: column; align-items: center; text-align: center; padding: 26px 28px;
+  }
+  .src img { width: 134px; height: 134px; border-radius: 16px; }
+  .src h3 { font-size: 34px; margin-top: 30px; }
+  .src p { font-size: 23px; color: var(--muted); line-height: 1.4; margin-top: 16px; }
+  .src .pill { margin-top: auto; background: #2a1618; color: var(--orange); border: 2px solid var(--orange); }
+  .connector { position: absolute; left: 442px; top: 290px; width: 116px; height: 520px; }
+  .lane {
+    position: absolute; left: 558px; width: 1260px; height: 232px;
+    background: #1b2430; border: 2px solid var(--line); border-radius: 22px; overflow: hidden;
+    padding: 18px 26px 18px 44px;
+  }
+  .lane::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 16px; background: var(--c); }
+  .lane .head { display: flex; align-items: center; gap: 26px; }
+  .lane .pill { background: color-mix(in srgb, var(--c) 12%, #111); color: var(--c); border: 2px solid var(--c); min-width: 272px; text-align: center; }
+  .lane .head h3 { font-size: 34px; font-weight: 700; flex: 1; }
+  .lane .head .tag { font-size: 26px; color: var(--text); }
+  .chips { display: flex; gap: 22px; margin-top: 22px; }
+  .chip {
+    display: flex; align-items: center; gap: 14px; padding: 12px 20px; min-width: 300px;
+    background: #202a37; border: 2px solid var(--line); border-radius: 14px;
+  }
+  .chip img { height: 44px; width: auto; }
+  .chip .ico { width: 48px; height: 48px; display: grid; place-items: center; background: #2b3746; border-radius: 10px; }
+  .chip .ico img { height: 34px; }
+  .chip b { display: block; font-size: 24px; }
+  .chip small { display: block; font-size: 19px; color: var(--muted); }
+  .lane p { margin-top: 16px; font-size: 22px; color: var(--muted); }
+  .lane p code { color: var(--text); background: #0f141b; padding: 2px 10px; border-radius: 6px; }
+
+  /* ---------- install slides ---------- */
+  .install .shot { position: absolute; left: 62px; top: 200px; width: 1110px; }
+  .install .caption {
+    position: absolute; left: 1300px; right: 70px; top: 320px; font-size: 38px; line-height: 1.4;
+  }
+  .install .caption a { color: var(--orange); text-decoration: none; }
+  .install .caption .hint { display: block; margin-top: 28px; font-size: 26px; color: var(--muted); }
+  .kbd {
+    display: inline-block; padding: 2px 14px; border: 1px solid #555; border-bottom-width: 3px;
+    border-radius: 8px; background: #1a1f27; font-size: .85em;
+  }
+
+  /* ---------- npx ---------- */
+  .s-npx .a { position: absolute; left: 96px; top: 236px; width: 862px; }
+  .s-npx .b { position: absolute; left: 1076px; top: 196px; width: 788px; }
+
+  /* ---------- local AI demo ---------- */
+  .steps { position: absolute; left: 90px; top: 168px; width: 860px; display: flex; flex-direction: column; gap: 14px; }
+  .crop { overflow: hidden; border-radius: 12px; border: 1px solid var(--line); }
+  .crop img { display: block; width: 100%; }
+  .crop.top { height: 262px; }
+  .crop.bot { height: 104px; } .crop.bot img { margin-top: -380px; }
+  .arrow-label { color: var(--orange); font-size: 30px; font-weight: 600; display: flex; align-items: center; gap: 12px; padding: 4px 0; }
+  .arrow-label::before { content: "↓"; font-size: 30px; }
+  .cat { width: 270px; border-radius: 14px; align-self: flex-start; margin-left: 290px; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+  .s-localai .video { position: absolute; left: 1110px; top: 124px; width: 720px; }
+
+  .bigvideo { position: absolute; top: 196px; left: 0; right: 0; margin: 0 auto; }
+
+  /* ---------- tracelens ---------- */
+  .prompt {
+    font-size: 30px; font-style: italic; color: #fff;
+    border-left: 6px solid var(--orange); padding: 10px 24px; background: rgba(246,118,60,.08); border-radius: 0 10px 10px 0;
+  }
+  .s-trace .prompt { position: absolute; left: 62px; top: 168px; right: 62px; }
+  .s-trace .notes { position: absolute; left: 62px; top: 280px; width: 740px; font-size: 29px; line-height: 1.35; }
+  .s-trace .notes li { margin-bottom: 4px; list-style: none; }
+  .s-trace .notes li::before { content: "▸ "; color: var(--orange); }
+  .s-trace .gemm { position: absolute; left: 92px; top: 410px; width: 560px; height: 560px; }
+  .s-trace .gemm img { height: 100%; width: 100%; object-fit: cover; object-position: top; }
+  .s-trace .summary { position: absolute; left: 830px; top: 252px; width: 1062px; }
+
+  /* ---------- walkthroughs ---------- */
+  .bullets { position: absolute; left: 62px; top: 250px; width: 1060px; font-size: 38px; line-height: 1.35; }
+  .bullets > li { list-style: none; margin-bottom: 28px; padding-left: 40px; position: relative; }
+  .bullets > li::before { content: ""; position: absolute; left: 0; top: 18px; width: 14px; height: 14px; background: var(--orange); transform: rotate(45deg); }
+  .bullets ul { margin-top: 14px; font-size: 30px; color: #c8d3de; }
+  .bullets ul li { list-style: none; margin: 10px 0; padding-left: 30px; position: relative; }
+  .bullets ul li::before { content: "–"; position: absolute; left: 0; color: #6b7480; }
+  .s-walk .side { position: absolute; right: 0; top: 0; width: 770px; height: 1080px; overflow: hidden; }
+  .s-walk .side img { width: 100%; height: 100%; object-fit: cover; object-position: top left; }
+  .s-walk .side::before { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, #000 0, transparent 120px); }
+  .s-walk .title { right: 820px; }
+
+  /* ---------- eval ---------- */
+  .qa { display: grid; gap: 26px; }
+  .qa h3 { font-size: 40px; color: #fff; margin-bottom: 6px; }
+  .qa .q { padding: 18px 24px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); }
+  .qa .q b { display: block; font-size: 29px; font-weight: 600; margin-bottom: 6px; }
+  .qa .q span { font-size: 23px; color: var(--muted); }
+  .tag-trig { color: var(--orange-2) !important; }
+  .s-eval1 .shot { position: absolute; left: 40px; top: 230px; width: 1060px; }
+  .s-eval1 .qa { position: absolute; left: 1150px; right: 62px; top: 220px; }
+  .s-eval2 .shot { position: absolute; left: 62px; top: 200px; width: 880px; }
+  .s-eval2 .qa { position: absolute; left: 1020px; right: 62px; top: 220px; }
+  .soon { display: inline-block; font-size: 18px; font-weight: 700; letter-spacing: .1em; color: var(--yellow); border: 2px solid var(--yellow); padding: 2px 12px; border-radius: 999px; vertical-align: 6px; margin-left: 10px; }
+
+  /* ---------- profiling ---------- */
+  .s-prof .shot { position: absolute; left: 560px; top: 200px; width: 1310px; }
+  .s-prof .side-text { position: absolute; left: 62px; top: 440px; width: 450px; }
+  .s-prof .side-text b { display: block; font-size: 38px; line-height: 1.2; margin-bottom: 18px; }
+  .s-prof .side-text span { font-size: 27px; color: var(--muted); line-height: 1.4; }
+
+  /* ---------- quark ---------- */
+  .s-quark .prompt { position: absolute; left: 72px; top: 200px; right: 72px; }
+  .s-quark .shot { position: absolute; left: 72px; top: 296px; width: 1250px; }
+  .flow { position: absolute; left: 1418px; top: 310px; width: 440px; }
+  .flow h4 { font-size: 22px; letter-spacing: .14em; color: #b9bfcc; margin-bottom: 22px; }
+  .flow ol { list-style: none; display: grid; gap: 16px; }
+  .flow li {
+    display: flex; align-items: center; gap: 18px; font-size: 28px; color: #f6f7fb;
+    padding: 12px 18px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line);
+  }
+  .flow li i { font-style: normal; font-weight: 800; color: #ff5a66; width: 26px; }
+  .result {
+    position: absolute; left: 1418px; top: 790px; width: 440px; padding: 22px 24px;
+    border-radius: 14px; background: rgba(55,214,122,.08); border: 1px solid rgba(55,214,122,.45);
+    font-size: 27px; line-height: 1.4; color: #b9bfcc;
+  }
+  .result b { color: #fff; }
+
+  /* ---------- UI chrome ---------- */
+  #progress { position: fixed; left: 0; bottom: 0; height: 4px; background: var(--orange); width: 0; transition: width .4s var(--ease); z-index: 20; }
+  #hud {
+    position: fixed; right: 18px; bottom: 14px; z-index: 20; display: flex; gap: 8px; align-items: center;
+    font: 13px "Segoe UI", sans-serif; color: #8a939e; opacity: 0; transition: opacity .3s;
+  }
+  body:hover #hud { opacity: 1; }
+  #hud button {
+    background: rgba(30,35,42,.85); color: #ddd; border: 1px solid #333; border-radius: 8px;
+    padding: 6px 10px; cursor: pointer; font: inherit;
+  }
+  #hud button:hover { border-color: var(--orange); color: #fff; }
+  #notes {
+    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(1100px, 92vw);
+    max-height: 34vh; overflow: auto; z-index: 25; background: rgba(12,15,20,.96); border: 1px solid #333;
+    border-radius: 14px; padding: 18px 24px; font-size: 17px; line-height: 1.5; color: #d6dde5; display: none;
+  }
+  #notes.show { display: block; }
+  #notes h5 { font-size: 12px; letter-spacing: .14em; color: var(--orange); margin-bottom: 8px; }
+  #notes p + p { margin-top: 8px; }
+  #help {
+    position: fixed; inset: 0; z-index: 30; display: none; place-items: center; background: rgba(0,0,0,.7);
+  }
+  #help.show { display: grid; }
+  #help div { background: #12161c; border: 1px solid #333; border-radius: 16px; padding: 28px 36px; font-size: 17px; line-height: 2; }
+  #help b { display: inline-block; min-width: 150px; color: var(--orange); }
+
+  /* overview grid */
+  body.overview { overflow: auto; }
+  body.overview #viewport { position: static; display: block; padding: 40px; }
+  body.overview #stage { transform: none !important; width: auto; height: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 24px; }
+  body.overview .slide {
+    position: relative; inset: auto; opacity: 1; visibility: visible; width: 1920px; height: 1080px;
+    zoom: .1875; cursor: pointer; border: 6px solid #222; border-radius: 30px; transition: none;
+  }
+  body.overview .slide.active { border-color: var(--orange); }
+  body.overview #notes, body.overview #progress { display: none; }
+
+  @media print {
+    @page { size: 1920px 1080px; margin: 0; }
+    html, body { overflow: visible; height: auto; }
+    #viewport { position: static; display: block; }
+    #stage { transform: none !important; }
+    .slide { position: relative; opacity: 1 !important; visibility: visible !important; page-break-after: always; }
+    .slide .in { opacity: 1 !important; transform: none !important; animation: none !important; }
+    #hud, #progress, #notes, #help { display: none !important; }
+  }
+</style>
+</head>
+<body>
+<div id="viewport"><div id="stage">
+
+<!-- 1 · Title -->
+<section class="slide s-title" data-notes="">
+  <h1 class="in">PyTorch Conference 2026<em>AMD Skills</em></h1>
+  <div class="who in" style="--d:2">Daniel Holanda</div>
+  <img class="footer-logo" src="assets/amd-logo.png" alt="AMD">
+</section>
+
+<!-- 2 · Hero -->
+<section class="slide s-hero" data-notes="I want to start this presentation with a question: When was the last time that your agent failed at a task you didn't expect it to fail? Or maybe it achieved the goal, but just took a really long time to achieve that goal?|That actually happens fairly often, right? Turns out that, sometimes, all you need to do is to steer your model towards the right direction to begin with.|Use tool A, not tool B. Make sure you don't forget to use this flag, and oh, btw, if you are using this specific hardware, this is the fastest backend to use.">
+  <h1 class="in">AMD Skills</h1>
+  <h2 class="in" style="--d:1">github.com/amd/skills</h2>
+  <img class="gif in" style="--d:2" src="assets/hero.gif" alt="AMD Skills — give your AI agents the power of AMD's optimized ecosystem">
+  <img class="mask" src="assets/mask.png" alt="">
+  <img class="qr in" style="--d:3" src="assets/qr.png" alt="QR code to github.com/amd/skills">
+</section>
+
+<!-- 3 · Overview -->
+<section class="slide s-overview" data-notes="This is why we created AMD Skills. To make your agents really good at assisting you with AMD technology, so you don't have to worry about those details.|You ask your agent something, you provide it with the right skills, and it just works.|Inside of AMD we also worked really hard at making sure you have access to skills across our product portfolio, making sure that those skills are high quality, and making sure you can get access to them from a single cohesive place.">
+  <div class="kicker">EMPOWER YOUR AI AGENTS WITH AMD'S OPTIMIZED SW STACK</div>
+  <div class="title">AMD Skills <span>Overview</span></div>
+  <div class="facts">
+    <div class="in" style="--d:1"><div class="label">What is it?</div><div class="lead">Official AMD catalog of AI agent skills</div></div>
+    <div class="in" style="--d:2"><div class="label">Goal</div><div class="lead">Make AI agents significantly better at assisting users with AMD technology</div></div>
+    <div class="in" style="--d:3"><div class="label">How to get access?</div><div class="lead">Available at <span class="accent">github.com/amd/skills</span></div></div>
+    <div class="in" style="--d:4"><div class="label">Quick Start</div><div class="lead">Open a terminal and run<br><code style="display:inline-block;margin-top:12px">npx skills add amd/skills</code></div></div>
+  </div>
+  <div class="shot in" style="--d:2"><img src="assets/github-repo.png" alt="github.com/amd/skills repository page"></div>
+  <div class="star in" style="--d:5">Star the repo →</div>
+  <img class="qr in" style="--d:5" src="assets/qr.png" alt="QR code">
+</section>
+
+<!-- 4 · Catalog -->
+<section class="slide s-catalog" data-notes="vLLM serving: detect hardware (or onboard via AMD Developer Cloud), validate model fit, apply the right vLLM recipe, and launch a benchmarked endpoint. SGLang and engine/backend selection in later phases.">
+  <div class="kicker">EMPOWER YOUR AI AGENTS WITH AMD'S OPTIMIZED SW STACK</div>
+  <div class="title">AMD Skills <span>What is in the catalog?</span></div>
+  <div class="catalog">
+    <div class="group in" style="--d:1">
+      <h3>Server Native Skills</h3>
+      <div class="rows">
+        <div class="row"><b>vLLM Serving</b><span>Deploy LLM inference on AMD Instinct GPUs and EPYC CPUs</span></div>
+        <div class="row"><b>Hyperloom</b><span>Autonomously optimizes end-to-end LLM inference on AMD Instinct GPUs</span></div>
+        <div class="row"><b>MagPie</b><span>Benchmark vLLM/SGLang inference and evaluate GPU kernels</span></div>
+        <div class="row"><b>TraceLens</b><span>Turn PyTorch profiler traces into a prioritized performance report</span></div>
+        <div class="row"><b>Quark</b><span>Quantize LLMs with AMD Quark post-training quantization<i class="new">new</i></span></div>
+      </div>
+    </div>
+    <div class="group in" style="--d:2">
+      <h3>Client Native and Cross-Stack Skills</h3>
+      <div class="rows">
+        <div class="row"><b>Local AI Use</b><span>Route image generation, TTS, and STT through a local AI server</span></div>
+        <div class="row"><b>Local AI App Integration</b><span>Integrate local AI into your own LLM app</span></div>
+        <div class="row"><b>Lemonade Router Builder</b><span>Route LLM calls based on content, sensitivity, or required capabilities<i class="new">new</i></span></div>
+        <div class="row"><b>ROCm Doctor</b><span>Diagnose and fix common ROCm, HIP, PyTorch, and llama.cpp failures on AMD GPUs<i class="new">new</i></span></div>
+      </div>
+    </div>
+  </div>
+  <div class="expand in" style="--d:4"><b>Under active expansion</b><span>Our catalog is expected to grow significantly</span></div>
+  <img class="qr in" style="--d:5" src="assets/qr.png" alt="QR code">
+</section>
+
+<!-- 5 · Access paths -->
+<section class="slide s-access">
+  <div class="kicker">EMPOWER YOUR AI AGENTS WITH AMD'S OPTIMIZED SW STACK</div>
+  <div class="title">AMD Skills <span>Different ways of getting access</span></div>
+
+  <div class="src in" style="--d:1">
+    <img src="assets/amd-square.jpg" alt="AMD">
+    <h3>AMD Skills Repo</h3>
+    <p>All skills aggregated.<br>Every skill verified through CI/CD.</p>
+    <span class="pill">SKILLS SOURCE</span>
+  </div>
+
+  <svg class="connector in" style="--d:2" viewBox="0 0 116 520" fill="none">
+    <path d="M0 241 H40 C58 241 58 116 76 116 H112" stroke="#37d67a" stroke-width="3"/>
+    <path d="M0 241 H40 C58 241 58 376 76 376 H112" stroke="#ffcf5c" stroke-width="3"/>
+    <path d="M104 108 L114 116 L104 124" stroke="#37d67a" stroke-width="3"/>
+    <path d="M104 368 L114 376 L104 384" stroke="#ffcf5c" stroke-width="3"/>
+  </svg>
+
+  <div class="lane in" style="--c:var(--green); top:290px; --d:3">
+    <div class="head"><span class="pill">MAIN CATALOG</span><h3>Vercel NPX: the industry-standard catalog</h3><span class="tag">All Skills</span></div>
+    <div class="chips">
+      <div class="chip"><span class="ico"><img src="assets/logo-vercel.png" alt=""></span><div><b>npx skills CLI</b><small>Terminal installer</small></div></div>
+      <div class="chip"><img src="assets/logo-skills-sh.png" alt="skills.sh" style="height:46px"><div><b>skills.sh</b><small>Web marketplace</small></div></div>
+    </div>
+    <p>The complete set. Users pick individual skills; works with all agents. Command: <code>npx skills add amd/skills</code></p>
+  </div>
+
+  <div class="lane in" style="--c:var(--yellow); top:550px; --d:4">
+    <div class="head"><span class="pill">SHOWCASE CATALOGS</span><h3>Plugin Marketplaces</h3><span class="tag">Curated bundle</span></div>
+    <div class="chips">
+      <div class="chip"><span class="ico"><img src="assets/logo-claude.png" alt=""></span><div><b>Claude Code</b><small>Plugin marketplace</small></div></div>
+      <div class="chip"><span class="ico"><img src="assets/logo-cursor.png" alt=""></span><div><b>Cursor</b><small>Plugin marketplace</small></div></div>
+      <div class="chip"><span class="ico"><img src="assets/logo-openai.png" alt=""></span><div><b>Codex</b><small>Plugin marketplace</small></div></div>
+    </div>
+    <p>Cherry-picked skills. Same selection across all agents, built from the same source.</p>
+  </div>
+  <img class="qr in" style="--d:5; position:absolute; right:70px; bottom:60px; width:160px" src="assets/qr.png" alt="QR code">
+</section>
+
+<!-- 6 · Codex -->
+<section class="slide install">
+  <div class="kicker">EMPOWER YOUR AI AGENTS WITH AMD'S OPTIMIZED SW STACK</div>
+  <div class="title">AMD Skills <span>Installing on Codex</span></div>
+  <div class="shot in" style="--d:1"><img src="assets/install-codex.png" alt="AMD Skills in the Codex plugin directory"></div>
+  <div class="caption in" style="--d:2">Available natively on the Codex app under <b>Plugins</b>.<span class="hint">Click <span class="kbd">Try now</span> to get started.</span></div>
+</section>
+
+<!-- 7 · Claude -->
+<section class="slide install">
+  <div class="kicker">EMPOWER YOUR AI AGENTS WITH AMD'S OPTIMIZED SW STACK</div>
+  <div class="title">AMD Skills <span>Installing on Claude</span></div>
+  <div class="shot in" style="--d:1"><img src="assets/install-claude.png" alt="amd-skills in the Claude Code plugin discover tab"></div>
+  <div class="caption in" style="--d:2">Simply open Claude, type <span class="kbd mono">/plugins</span> and look for <b class="accent">amd-skills</b> on the <b>Discover</b> tab.<span class="hint">You may need to update your marketplace.</span></div>
+</section>
+
+<!-- 8 · Cursor -->
+<section class="slide install">
+  <div class="kicker">EMPOWER YOUR AI AGENTS WITH AMD'S OPTIMIZED SW STACK</div>
+  <div class="title">AMD Skills <span>Installing on Cursor</span></div>
+  <div class="shot in" style="--d:1"><img src="assets/install-cursor.png" alt="AMD on the Cursor marketplace"></div>
+  <div class="caption in" style="--d:2">Available worldwide on <a href="https://cursor.com/marketplace/amd">cursor.com/marketplace/amd</a><span class="hint">Click on <span class="kbd">Add to Cursor</span></span></div>
+</section>
+
+<!-- 9 · npx -->
+<section class="slide s-npx">
+  <div class="kicker">EMPOWER YOUR AI AGENTS WITH AMD'S OPTIMIZED SW STACK</div>
+  <div class="title">AMD Skills <span>Installing using npx</span></div>
+  <div class="shot a in" style="--d:1"><img src="assets/npx-readme.png" alt="Installation instructions"></div>
+  <div class="shot b in" style="--d:2"><img src="assets/npx-cli.png" alt="npx skills CLI selecting AMD skills"></div>
+</section>
+
+<!-- 10 · Demo: Local AI Use -->
+<section class="slide s-localai">
+  <div class="kicker">EMPOWER YOUR AI AGENTS WITH AMD'S OPTIMIZED SW STACK</div>
+  <div class="title" style="font-size:52px; top:78px">AMD Skills Demos <span>Local AI Use</span></div>
+  <div class="steps">
+    <div class="crop top in" style="--d:1; margin-top:0"><img src="assets/claude-prompt.png" alt="Claude Code welcome"></div>
+    <div class="crop bot in" style="--d:2"><img src="assets/claude-prompt.png" alt="Prompt: learn how to generate images locally"></div>
+    <div class="arrow-label in" style="--d:3">Agent installs local image generation SW</div>
+    <div class="crop in" style="--d:4"><img src="assets/cat-prompt.png" alt="Prompt: generate an image of a cat in space"></div>
+    <div class="arrow-label in" style="--d:5">Cloud agent runs LLM + Local agent runs image generation</div>
+    <img class="cat in" style="--d:6" src="assets/cat.png" alt="Generated image of a cat astronaut">
+  </div>
+  <div class="shot video in" style="--d:2">
+    <video src="assets/demo-local-ai.mp4" poster="assets/poster-local-ai.png" controls playsinline preload="metadata"></video>
+  </div>
+</section>
+
+<!-- 11 · Demo: Local AI App Integration -->
+<section class="slide">
+  <div class="kicker">EMPOWER YOUR AI AGENTS WITH AMD'S OPTIMIZED SW STACK</div>
+  <div class="title">AMD Skills Demos <span>Local AI App Integration</span></div>
+  <div class="shot bigvideo in" style="--d:1; width:1480px">
+    <video src="assets/demo-app-integration.mp4" poster="assets/poster-app-integration.png" controls playsinline preload="metadata"></video>
+  </div>
+</section>
+
+<!-- 12 · Demo: Serving LLMs on Instinct -->
+<section class="slide">
+  <div class="kicker">EMPOWER YOUR AI AGENTS WITH AMD'S OPTIMIZED SW STACK</div>
+  <div class="title">AMD Skills Demos <span>Serving LLMs on Instinct</span></div>
+  <div class="shot bigvideo in" style="--d:1; width:1500px">
+    <video src="assets/demo-instinct.mp4" poster="assets/poster-instinct.png" controls playsinline preload="metadata"></video>
+  </div>
+</section>
+
+<!-- 13 · Demo: TraceLens -->
+<section class="slide s-trace">
+  <div class="kicker">EMPOWER YOUR AI AGENTS WITH AMD'S OPTIMIZED SW STACK</div>
+  <div class="title">AMD Skills Demos <span>TraceLens</span></div>
+  <div class="prompt in" style="--d:1">“Run the TraceLens orchestrator on my trace in <code>llama3_70b_trace</code> and put the results in <code>llama3_70b_analysis</code>”</div>
+  <ul class="notes in" style="--d:2">
+    <li>Clearly identifies the bottlenecks</li>
+    <li>The report shows which GEMMs are inefficient</li>
+  </ul>
+  <div class="shot gemm in" style="--d:3"><img src="assets/tracelens-gemm.png" alt="Per-GEMM efficiency table"></div>
+  <div class="shot summary in" style="--d:2"><img src="assets/tracelens-summary.png" alt="Llama 3 70B MI300X standalone analysis summary"></div>
+</section>
+
+<!-- 14 · Walkthroughs -->
+<section class="slide s-walk">
+  <div class="kicker">EMPOWER YOUR AI AGENTS WITH AMD'S OPTIMIZED SW STACK</div>
+  <div class="title">AMD Skills <span>Walkthroughs</span></div>
+  <ul class="bullets">
+    <li class="in" style="--d:1">The easiest way of getting started</li>
+    <li class="in" style="--d:2">Guided tours through each of the skills</li>
+    <li class="in" style="--d:3">Each skill has a corresponding walkthrough</li>
+    <li class="in" style="--d:4">Learn things such as
+      <ul>
+        <li>How do I know if my agent is picking up the skill?</li>
+        <li>What should I expect from the same task if no skill is present?</li>
+        <li>Specific examples and best known configurations</li>
+      </ul>
+    </li>
+  </ul>
+  <div class="side in" style="--d:1"><img src="assets/walkthroughs.png" alt="Walkthroughs folder on GitHub"></div>
+</section>
+
+<!-- 15 · Skill Evaluation (individual) -->
+<section class="slide s-eval1">
+  <div class="kicker">EMPOWER YOUR AI AGENTS WITH AMD'S OPTIMIZED SW STACK</div>
+  <div class="title">AMD Skills <span>Skill Evaluation</span></div>
+  <div class="shot in" style="--d:1"><img src="assets/eval-json.png" alt="Example evaluation JSON"></div>
+  <div class="qa">
+    <h3 class="in" style="--d:2">Individual Skill Evals</h3>
+    <div class="q in" style="--d:3"><b>“Does it trigger the right workflows?”</b><span class="tag-trig">Expected trigger + Behavioral expectation</span></div>
+    <div class="q in" style="--d:4"><b>“Does it trigger when it is supposed to?”</b><span class="tag-trig">Expected trigger + No behavioral expectation</span></div>
+    <div class="q in" style="--d:5"><b>“Does it trigger when it is not supposed to?”</b><span class="tag-trig">Unexpected trigger + No behavioral expectation</span></div>
+  </div>
+</section>
+
+<!-- 16 · Skill Evaluation (interactions) -->
+<section class="slide s-eval2">
+  <div class="kicker">EMPOWER YOUR AI AGENTS WITH AMD'S OPTIMIZED SW STACK</div>
+  <div class="title">AMD Skills <span>Skill Evaluation</span></div>
+  <div class="shot in" style="--d:1"><img src="assets/eval-results.png" alt="Cross-skill trigger evaluation results"></div>
+  <div class="qa">
+    <h3 class="in" style="--d:2">Interactions Between Skills</h3>
+    <div class="q in" style="--d:3"><b>“Will adding a new skill to the bundle create false triggers?”</b></div>
+    <div class="q in" style="--d:4"><b>“Will adding a new skill to the bundle create missed triggers?”</b></div>
+    <h3 class="in" style="--d:5; margin-top:40px">Lifespan Checks <i class="soon">COMING SOON</i></h3>
+    <div class="q in" style="--d:6"><b>How do we know how close a skill is to the end of its lifespan?</b></div>
+  </div>
+</section>
+
+<!-- 17 · Profiling tools -->
+<section class="slide s-prof">
+  <div class="kicker">EMPOWER YOUR AI AGENTS WITH AMD'S OPTIMIZED SW STACK</div>
+  <div class="title">AMD Skills <span>Skill Profiling Tools</span> <i class="soon">COMING SOON</i></div>
+  <div class="side-text in" style="--d:2"><b>Visualize, debug, and understand skill behavior</b><span>Visual insights into how agents execute tasks and make decisions</span></div>
+  <div class="shot in" style="--d:1"><img src="assets/profiler.png" alt="Agent conversation timeline profiler"></div>
+</section>
+
+<!-- 18 · Demo: Quark -->
+<section class="slide s-quark">
+  <div class="kicker">EMPOWER YOUR AI AGENTS WITH AMD'S OPTIMIZED SW STACK</div>
+  <div class="title">AMD Skills Demos <span>Quark</span></div>
+  <div class="prompt in" style="--d:1">“Help me quantize Qwen/Qwen3-8B to FP8…”</div>
+  <div class="shot in" style="--d:2"><img src="assets/quark.gif" alt="Quark quantization workflow demo"></div>
+  <div class="flow in" style="--d:3">
+    <h4>GUIDED PTQ WORKFLOW</h4>
+    <ol>
+      <li><i>1</i>Model intake</li>
+      <li><i>2</i>Quantization plan</li>
+      <li><i>3</i>Manifest generation</li>
+      <li><i>4</i>Execute and verify</li>
+    </ol>
+  </div>
+  <div class="result in" style="--d:5"><b>Quark successfully quantized Qwen3-8B to FP8</b> and exported the model.</div>
+</section>
+
+</div></div>
+
+<div id="progress"></div>
+<div id="notes"><h5>SPEAKER NOTES</h5><div id="notes-body"></div></div>
+<div id="hud">
+  <span id="count"></span>
+  <button data-act="prev" title="Previous (←)">‹</button>
+  <button data-act="next" title="Next (→)">›</button>
+  <button data-act="overview" title="Overview (O)">▦</button>
+  <button data-act="notes" title="Speaker notes (N)">✎</button>
+  <button data-act="full" title="Fullscreen (F)">⛶</button>
+  <button data-act="help" title="Shortcuts (?)">?</button>
+</div>
+<div id="help"><div>
+  <div><b>→ / Space / PgDn</b> next slide</div>
+  <div><b>← / PgUp</b> previous slide</div>
+  <div><b>Home / End</b> first / last</div>
+  <div><b>F</b> fullscreen</div>
+  <div><b>O / Esc</b> overview grid</div>
+  <div><b>N</b> speaker notes</div>
+  <div><b>M</b> mute / unmute video</div>
+  <div><b>Ctrl+P</b> export to PDF</div>
+</div></div>
+
+<script>
+(() => {
+  const stage = document.getElementById('stage');
+  const slides = [...document.querySelectorAll('.slide')];
+  const progress = document.getElementById('progress');
+  const count = document.getElementById('count');
+  const notes = document.getElementById('notes');
+  const notesBody = document.getElementById('notes-body');
+  const help = document.getElementById('help');
+  let cur = 0;
+
+  // page numbers + footer logo on content slides
+  slides.forEach((s, i) => {
+    if (i < 2) return;
+    const n = document.createElement('div');
+    n.className = 'pagenum'; n.textContent = String(i + 1).padStart(2, '0');
+    s.appendChild(n);
+  });
+
+  function fit() {
+    if (document.body.classList.contains('overview')) return;
+    const k = Math.min(innerWidth / 1920, innerHeight / 1080);
+    stage.style.transform = `scale(${k})`;
+  }
+
+  function playVideos(slide) {
+    slide.querySelectorAll('video').forEach(v => {
+      v.currentTime = 0;
+      v.muted = false;
+      v.play().catch(() => { v.muted = true; v.play().catch(() => {}); });
+    });
+  }
+
+  function go(i, push = true) {
+    i = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach(s => s.querySelectorAll('video').forEach(v => v.pause()));
+    slides[cur].classList.remove('active');
+    // restart entrance animations
+    void slides[i].offsetWidth;
+    cur = i;
+    slides[cur].classList.add('active');
+    progress.style.width = ((cur + 1) / slides.length * 100) + '%';
+    count.textContent = `${cur + 1} / ${slides.length}`;
+    const txt = slides[cur].dataset.notes || '';
+    notesBody.innerHTML = txt ? txt.split('|').map(p => `<p>${p}</p>`).join('') : '<p style="color:#666">No notes for this slide.</p>';
+    if (push) history.replaceState(null, '', '#' + (cur + 1));
+    if (!document.body.classList.contains('overview')) playVideos(slides[cur]);
+  }
+
+  function toggleOverview(force) {
+    const on = document.body.classList.toggle('overview', force);
+    if (on) {
+      slides.forEach(s => s.querySelectorAll('video').forEach(v => v.pause()));
+      slides[cur].scrollIntoView({ block: 'center' });
+    } else { fit(); playVideos(slides[cur]); }
+  }
+
+  function full() {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen().catch(() => {});
+  }
+
+  const actions = {
+    next: () => go(cur + 1), prev: () => go(cur - 1),
+    overview: () => toggleOverview(), notes: () => notes.classList.toggle('show'),
+    full, help: () => help.classList.toggle('show'),
+  };
+
+  document.addEventListener('keydown', e => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const k = e.key;
+    if (help.classList.contains('show') && k !== '?') { help.classList.remove('show'); return; }
+    if (['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'].includes(k)) {
+      if (document.body.classList.contains('overview') && k === 'Enter') { toggleOverview(false); return; }
+      e.preventDefault(); go(cur + 1);
+    }
+    else if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'].includes(k)) { e.preventDefault(); go(cur - 1); }
+    else if (k === 'Home') go(0);
+    else if (k === 'End') go(slides.length - 1);
+    else if (k === 'f' || k === 'F') full();
+    else if (k === 'o' || k === 'O' || (k === 'Escape' && !document.fullscreenElement)) toggleOverview();
+    else if (k === 'n' || k === 'N') actions.notes();
+    else if (k === '?') actions.help();
+    else if (k === 'm' || k === 'M') slides[cur].querySelectorAll('video').forEach(v => v.muted = !v.muted);
+  });
+
+  document.getElementById('hud').addEventListener('click', e => {
+    const a = e.target.closest('button')?.dataset.act; if (a) actions[a]();
+  });
+  help.addEventListener('click', () => help.classList.remove('show'));
+
+  slides.forEach((s, i) => s.addEventListener('click', e => {
+    if (document.body.classList.contains('overview')) { go(i); toggleOverview(false); }
+  }));
+
+  // swipe support
+  let x0 = null;
+  addEventListener('touchstart', e => x0 = e.touches[0].clientX, { passive: true });
+  addEventListener('touchend', e => {
+    if (x0 === null) return;
+    const dx = e.changedTouches[0].clientX - x0;
+    if (Math.abs(dx) > 50) go(cur + (dx < 0 ? 1 : -1));
+    x0 = null;
+  });
+
+  addEventListener('resize', fit);
+  addEventListener('hashchange', () => go((parseInt(location.hash.slice(1)) || 1) - 1, false));
+  fit();
+  slides[0].classList.add('active');
+  go((parseInt(location.hash.slice(1)) || 1) - 1, false);
+})();
+</script>
+</body>
+</html>
